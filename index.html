@@ -3,167 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Bot</title>
+    <title>Vertical Market Chart</title>
     <style>
-        body { font-family: 'Pretendard', sans-serif; margin: 0; background: #121212; color: #fff; overflow: hidden; }
-        .page { width: 100vw; height: 100vh; position: absolute; transition: transform 0.3s ease; padding: 20px; box-sizing: border-box; }
+        :root { --primary: #f3ba2f; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --up: #00ff88; --down: #ff4444; }
+        body { font-family: 'Pretendard', sans-serif; margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
         
-        /* 페이지 전환용 */
-        #page-setup { transform: translateX(0); }
-        #page-analysis { transform: translateX(100%); background: #1a1a1a; }
+        .page { width: 100vw; height: 100vh; position: absolute; transition: transform 0.4s ease; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        #page-setup { transform: translateX(0); z-index: 10; }
+        #page-analysis { transform: translateX(100%); background: #161616; z-index: 5; }
         .active-analysis #page-setup { transform: translateX(-100%); }
-        .active-analysis #page-analysis { transform: translateX(0); }
+        .active-analysis #page-analysis { transform: translateX(0); z-index: 20; }
 
-        /* UI 요소 */
-        h2 { color: #f3ba2f; margin-bottom: 30px; }
-        select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; font-size: 16px; box-sizing: border-box; }
-        select { background: #333; color: white; appearance: none; }
-        button { background: #f3ba2f; color: #000; font-weight: bold; cursor: pointer; }
-        .back-btn { background: #444; color: #fff; width: auto; padding: 10px 20px; }
+        /* 설정 페이지 스타일 */
+        select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; }
+        select { background: #333; color: white; border: 1px solid #444; }
+        button { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; }
 
-        /* 상태 표시 */
-        .status-card { background: #2a2a2a; border-radius: 15px; padding: 20px; margin-top: 20px; border-left: 5px solid #f3ba2f; }
-        #timer-bar { height: 4px; background: #f3ba2f; width: 0%; transition: width 1s linear; margin-top: 10px; }
-        #log-area { height: 200px; overflow-y: auto; font-size: 13px; color: #aaa; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; }
+        /* 세션 카드 (세로 버전) */
+        .session-list { display: flex; flex-direction: column; gap: 30px; margin-top: 20px; }
+        .session-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid #2a2a2a; }
+        .session-card.active { border: 1px solid var(--primary); }
+
+        .session-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
+
+        /* 세로 차트 컨테이너 */
+        .chart-container { display: flex; height: 300px; position: relative; border-bottom: 1px solid #333; border-left: 1px solid #333; margin-right: 70px; }
+        
+        /* 메인 차트 영역 (좌측) */
+        .chart-main { flex: 1; position: relative; overflow: hidden; background: linear-gradient(to bottom, #1a1a1a 0%, #121212 100%); }
+        
+        /* 가격 사이드바 (우측 고정) */
+        .price-sidebar { width: 70px; position: absolute; right: -70px; top: 0; bottom: 0; border-left: 1px dashed #333; font-size: 10px; color: #888; }
+
+        /* 가로 기준선 (그리드) */
+        .price-grid { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px dashed rgba(255,255,255,0.05); pointer-events: none; }
+        
+        /* 가로 가격 라벨 (우측 표현) */
+        .price-label-right { position: absolute; right: 5px; transform: translateY(-50%); white-space: nowrap; padding: 2px 4px; border-radius: 3px; }
+
+        /* 시작/최고/최저 가로선 */
+        .price-line { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; }
+        .price-line.open { border-top: 1px solid var(--up); }
+        .price-line.high { border-top: 1px solid var(--down); }
+        .price-line.low { border-top: 1px solid #4444ff; }
+
+        /* 차트 SVG */
+        .chart-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; }
+        .path-line { fill: none; stroke: rgba(255, 255, 255, 0.6); stroke-width: 1; }
+
+        /* 현재가 수평선 및 화살표 */
+        .current-price-line { position: absolute; left: 0; right: -70px; border-top: 1px solid var(--primary); z-index: 10; pointer-events: none; }
+        .current-price-tag { position: absolute; right: 5px; background: var(--primary); color: #000; font-weight: bold; padding: 2px 5px; border-radius: 3px; z-index: 11; font-size: 11px; transform: translateY(-50%); }
+
+        #timer-text { font-size: 12px; color: var(--primary); margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <!-- 1페이지: 설정 -->
     <div id="page-setup" class="page">
-        <h2>종목 설정</h2>
-        <label>시장 타입</label>
+        <h2>Market Analysis Setting</h2>
+        <label>마켓 타입</label>
         <select id="market-type">
-            <option value="SPOT">현물 (Spot)</option>
-            <option value="FUTURES">선물 (Futures)</option>
+            <option value="SPOT">SPOT</option>
+            <option value="FUTURES">FUTURES</option>
         </select>
-
-        <label>분석 종목</label>
-        <select id="symbol-select">
-            <option>불러오는 중...</option>
-        </select>
-
-        <button id="start-btn">분석 시작하기</button>
+        <label>종목</label>
+        <select id="symbol-select"><option>로딩 중...</option></select>
+        <button id="start-btn">차트 분석 시작</button>
     </div>
 
-    <!-- 2페이지: 분석 -->
     <div id="page-analysis" class="page">
-        <button class="back-btn" id="back-btn">← 뒤로가기</button>
-        <h2 id="current-symbol-title">BTCUSDT 분석 중</h2>
-        
-        <div class="status-card">
-            <div>상태: <span id="ana-status" style="color:#f3ba2f">데이터 수집 대기</span></div>
-            <div id="timer-text" style="font-size: 12px; margin-top:5px;">다음 분석까지: 05:00</div>
-            <div id="timer-bar"></div>
-        </div>
-
-        <div id="log-area">
-            <div>시스템 시작...</div>
-        </div>
+        <button id="back-btn" style="width:auto; padding:8px 15px; margin-bottom:15px; background:#333; color:#fff; border:none; border-radius:5px;">← 뒤로가기</button>
+        <div id="timer-text">다음 갱신: 05:00</div>
+        <h2 id="current-symbol-title" style="margin:5px 0;">-</h2>
+        <div id="session-list" class="session-list"></div>
     </div>
 
-    <script>
-        let autoTimer = null;
-        let countdown = 300;
-        const FIVE_MIN = 300;
-
-        // 1. 종목 리스트 업데이트 (뒤에 거래량 표시 제거)
-        async function updateSymbols() {
-            const isFutures = document.getElementById('market-type').value === 'FUTURES';
-            const url = isFutures ? 'https://fapi.binance.com/fapi/v1/ticker/24hr' : 'https://api.binance.com/api/v3/ticker/24hr';
-            
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                const top10 = data.filter(t => t.symbol.endsWith('USDT'))
-                                  .sort((a, b) => b.quoteVolume - a.quoteVolume)
-                                  .slice(0, 10);
-
-                const select = document.getElementById('symbol-select');
-                select.innerHTML = '';
-                top10.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.symbol;
-                    opt.innerText = t.symbol; // 거래량 텍스트 제거
-                    select.appendChild(opt);
-                });
-            } catch (e) { console.error("로드 실패"); }
-        }
-
-        // 2. 분석 로직 실행
-        async function runAnalysis() {
-            const symbol = document.getElementById('symbol-select').value;
-            const isFutures = document.getElementById('market-type').value === 'FUTURES';
-            const status = document.getElementById('ana-status');
-            
-            status.innerText = "데이터 분석 중...";
-            addLog(`${symbol} 데이터 요청...`);
-
-            try {
-                const url = isFutures 
-                    ? `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=5m&limit=20`
-                    : `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=5m&limit=20`;
-                
-                const res = await fetch(url);
-                const klines = await res.json();
-                
-                // --- 여기서 분석 알고리즘 호출 ---
-                addLog(`최근 종가: ${klines[klines.length-1][4]}`);
-                addLog(`분석 알고리즘 작동 완료.`);
-                // -----------------------------
-
-                status.innerText = "분석 완료 (대기)";
-            } catch (e) {
-                status.innerText = "에러 발생";
-                addLog("데이터를 가져오는데 실패했습니다.");
-            }
-        }
-
-        // 로그 기록 함수
-        function addLog(msg) {
-            const logArea = document.getElementById('log-area');
-            const now = new Date().toLocaleTimeString();
-            logArea.innerHTML = `<div>[${now}] ${msg}</div>` + logArea.innerHTML;
-        }
-
-        // 타이머 제어
-        function startTimer() {
-            countdown = FIVE_MIN;
-            if(autoTimer) clearInterval(autoTimer);
-            
-            autoTimer = setInterval(() => {
-                countdown--;
-                updateTimerUI();
-                
-                if(countdown <= 0) {
-                    runAnalysis();
-                    countdown = FIVE_MIN;
-                }
-            }, 1000);
-        }
-
-        function updateTimerUI() {
-            const min = Math.floor(countdown / 60);
-            const sec = countdown % 60;
-            document.getElementById('timer-text').innerText = `다음 분석까지: ${min}:${sec < 10 ? '0'+sec : sec}`;
-            document.getElementById('timer-bar').style.width = `${((FIVE_MIN - countdown) / FIVE_MIN) * 100}%`;
-        }
-
-        // 페이지 전환 이벤트
-        document.getElementById('start-btn').onclick = () => {
-            document.body.classList.add('active-analysis');
-            document.getElementById('current-symbol-title').innerText = `${document.getElementById('symbol-select').value} 분석`;
-            runAnalysis(); // 즉시 1회 실행
-            startTimer();  // 타이머 시작
-        };
-
-        document.getElementById('back-btn').onclick = () => {
-            document.body.classList.remove('active-analysis');
-            clearInterval(autoTimer); // 타이머 중지
-        };
-
-        document.getElementById('market-type').onchange = updateSymbols;
-        updateSymbols(); // 초기 로드
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

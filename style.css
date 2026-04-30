@@ -1,0 +1,32 @@
+﻿/* 막대그래프 높이를 조금 키워 차트 느낌을 강조합니다 */
+.bar-wrapper { 
+    position: relative; 
+    height: 80px; /* 기존 45px에서 확장 */
+    background: #252525; 
+    border-radius: 6px; 
+    margin: 40px 0; 
+    border: 1px solid #333; 
+}
+
+/* 궤적 점 스타일: top 값을 JS에서 동적으로 할당할 것이므로 여기서는 제거합니다 */
+.path-dot { 
+    position: absolute; 
+    width: 4px; 
+    height: 4px; 
+    background: white; 
+    border-radius: 50%; 
+    z-index: 3; 
+}
+
+/* 현재가 화살표 위치 조정 (높아진 높이에 맞춰) */
+.now-pointer { 
+    position: absolute; 
+    top: 100%; /* 바의 맨 아래쪽에 위치 */
+    width: 0; 
+    height: 0; 
+    border-left: 8px solid transparent; 
+    border-right: 8px solid transparent; 
+    border-top: 13px solid var(--primary); 
+    transform: translate(-50%, 0); /* 화살표가 바 아래에서 위를 가리키도록 */
+    z-index: 10; 
+}
