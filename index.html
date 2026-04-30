@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>차트 캡처 테스트</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f0f0f0; margin: 0; padding: 20px; }
+        #controls { margin-bottom: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button { padding: 12px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:disabled { background: #ccc; }
+        #preview-container { 
+            margin: 20px auto; 
+            width: 90%; 
+            max-width: 400px; 
+            min-height: 300px; 
+            border: 2px dashed #aaa; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background: white;
+            overflow: hidden;
+        }
+        #preview-img { width: 100%; display: none; }
+        p { color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <h2>화면 캡처 테스트</h2>
+        <button id="capture-btn">지금 화면 캡처하기</button>
+        <p id="timer-text">자동 분석 대기 중...</p>
+    </div>
+
+    <div id="preview-container">
+        <span id="placeholder">캡처된 화면이 여기에 표시됩니다.</span>
+        <img id="preview-img" alt="캡처 미리보기">
+    </div>
+
+    <script>
+        const captureBtn = document.getElementById('capture-btn');
+        const previewImg = document.getElementById('preview-img');
+        const placeholder = document.getElementById('placeholder');
+        const timerText = document.getElementById('timer-text');
+
+        // 캡처 함수
+        async function runCapture() {
+            try {
+                // 모바일/PC 브라우저에서 화면 공유/캡처 권한 요청
+                // (주의: 일반 웹사이트에서는 보안상 '내 화면'만 캡처 가능)
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: false
+                });
+
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    video.play();
+                    
+                    // 캔버스를 생성하여 현재 비디오 프레임을 그림
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // 데이터 URL로 변환 (Base64)
+                    const dataUrl = canvas.toDataURL('image/png');
+                    
+                    // 화면에 표시
+                    previewImg.src = dataUrl;
+                    previewImg.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    // 스트림 종료 (중요: 종료하지 않으면 상단에 공유 중 표시가 계속 남음)
+                    stream.getTracks().forEach(track => track.stop());
+                };
+            } catch (err) {
+                console.error("캡처 실패: ", err);
+                alert("화면 캡처 권한이 거부되었거나 지원되지 않는 브라우저입니다.");
+            }
+        }
+
+        // 수동 버튼 이벤트
+        captureBtn.addEventListener('click', runCapture);
+
+        // [테스트] 5분 주기 로직 (콘솔 로그로 확인)
+        let countdown = 300; // 5분 = 300초
+        setInterval(() => {
+            countdown--;
+            if (countdown <= 0) {
+                console.log("5분 경과! 자동 캡처를 시도합니다.");
+                // 실제 자동 캡처를 실행하려면 위 runCapture()를 호출하면 됩니다.
+                // 단, 브라우저 보안 정책상 첫 실행은 반드시 유저의 '클릭'이 필요합니다.
+                countdown = 300; 
+            }
+            const min = Math.floor(countdown / 60);
+            const sec = countdown % 60;
+            timerText.innerText = `다음 자동 분석까지: ${min}:${sec < 10 ? '0'+sec : sec}`;
+        }, 1000);
+    </script>
+</body>
+</html>
