@@ -1,5 +1,5 @@
 /**
- * script.js - 세로형 실제 차트 버전
+ * script.js - 확장 범위(최최저/최최고) 숫자 표출 버전
  */
 
 const SESSIONS = [
@@ -64,19 +64,16 @@ async function runMarketAnalysis() {
             card.className = `session-card ${session.isActive && session.isCompleted ? 'active' : 'inactive'}`;
             
             if (!session.isCompleted) {
-                card.innerHTML = `<div class="session-header"><strong>${session.name}</strong></div><div style="height:100px; display:flex; align-items:center; justify-content:center; color:#555;">데이터 생성 중...</div>`;
+                card.innerHTML = `<div class="session-header"><strong>${session.name}</strong></div><div style="height:100px; display:flex; align-items:center; justify-content:center; color:#555;">대기...</div>`;
             } else {
                 const b = { o: parseFloat(session.candle[1]), h: parseFloat(session.candle[2]), l: parseFloat(session.candle[3]) };
                 const range = b.h - b.l;
                 const minPrice = b.l - range; 
                 const maxPrice = b.h + range;
 
-                // 세로 버전 좌표 변환 (Y축이 가격)
                 const getY = (price) => 100 - (((price - minPrice) / (maxPrice - minPrice)) * 100);
-                // 가로 버전 좌표 변환 (X축이 시간 - 8시간 기준)
                 const getX = (time) => {
-                    const h = time.getHours() + time.getMinutes() / 60;
-                    let diff = (h - session.start);
+                    let diff = (time.getHours() + time.getMinutes()/60) - session.start;
                     if (diff < 0) diff += 24;
                     return (diff / 8) * 100;
                 };
@@ -84,31 +81,27 @@ async function runMarketAnalysis() {
                 const points = session.trajectory.map(k => `${getX(k.time)},${getY(k.price)}`).join(' ');
 
                 card.innerHTML = `
-                    <div class="session-header">
-                        <strong>${session.name}</strong>
-                        <small style="color:#888;">${session.start}:00 시작</small>
-                    </div>
+                    <div class="session-header"><strong>${session.name}</strong><small style="color:#888;">${session.start}:00</small></div>
                     <div class="chart-container">
                         <div class="chart-main">
-                            <!-- 시작/고/저 가로선 -->
-                            <div class="price-line open" style="top:${getY(b.o)}%;"></div>
+                            <div class="price-line limit" style="top:0%;"></div>
                             <div class="price-line high" style="top:${getY(b.h)}%;"></div>
-                            <div class="price-line low" style="left:0; top:${getY(b.l)}%;"></div>
+                            <div class="price-line open" style="top:${getY(b.o)}%;"></div>
+                            <div class="price-line low" style="top:${getY(b.l)}%;"></div>
+                            <div class="price-line limit" style="top:100%;"></div>
                             
-                            <!-- 꺾은선 차트 -->
                             <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <polyline class="path-line" points="${points}" />
                             </svg>
-
-                            <!-- 현재가 수평선 -->
                             <div class="current-price-line" style="top:${getY(nowPrice)}%;"></div>
                         </div>
                         
-                        <!-- 우측 가격 레이블 -->
                         <div class="price-sidebar">
-                            <div class="price-label-right" style="top:${getY(b.h)}%; color:#ff4444;">HI ${b.h.toFixed(1)}</div>
-                            <div class="price-label-right" style="top:${getY(b.o)}%; color:#00ff88;">OP ${b.o.toFixed(1)}</div>
+                            <div class="price-label-right" style="top:2%; color:var(--limit);">MAX ${maxPrice.toFixed(1)}</div>
+                            <div class="price-label-right" style="top:${getY(b.h)}%; color:var(--down);">HI ${b.h.toFixed(1)}</div>
+                            <div class="price-label-right" style="top:${getY(b.o)}%; color:var(--up);">OP ${b.o.toFixed(1)}</div>
                             <div class="price-label-right" style="top:${getY(b.l)}%; color:#4444ff;">LO ${b.l.toFixed(1)}</div>
+                            <div class="price-label-right" style="top:98%; color:var(--limit);">MIN ${minPrice.toFixed(1)}</div>
                             <div class="current-price-tag" style="top:${getY(nowPrice)}%;">${nowPrice.toFixed(1)}</div>
                         </div>
                     </div>
