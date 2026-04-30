@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertical Market Chart</title>
+    <title>Vertical Market Chart Pro</title>
     <style>
-        :root { --primary: #f3ba2f; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --up: #00ff88; --down: #ff4444; }
+        :root { --primary: #f3ba2f; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --up: #00ff88; --down: #ff4444; --limit: #666; }
         body { font-family: 'Pretendard', sans-serif; margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
         
         .page { width: 100vw; height: 100vh; position: absolute; transition: transform 0.4s ease; padding: 20px; box-sizing: border-box; overflow-y: auto; }
@@ -14,71 +14,52 @@
         .active-analysis #page-setup { transform: translateX(-100%); }
         .active-analysis #page-analysis { transform: translateX(0); z-index: 20; }
 
-        /* 설정 페이지 스타일 */
         select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; }
         select { background: #333; color: white; border: 1px solid #444; }
         button { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; }
 
-        /* 세션 카드 (세로 버전) */
         .session-list { display: flex; flex-direction: column; gap: 30px; margin-top: 20px; }
         .session-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid #2a2a2a; }
         .session-card.active { border: 1px solid var(--primary); }
 
         .session-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
 
-        /* 세로 차트 컨테이너 */
-        .chart-container { display: flex; height: 300px; position: relative; border-bottom: 1px solid #333; border-left: 1px solid #333; margin-right: 70px; }
-        
-        /* 메인 차트 영역 (좌측) */
-        .chart-main { flex: 1; position: relative; overflow: hidden; background: linear-gradient(to bottom, #1a1a1a 0%, #121212 100%); }
-        
-        /* 가격 사이드바 (우측 고정) */
-        .price-sidebar { width: 70px; position: absolute; right: -70px; top: 0; bottom: 0; border-left: 1px dashed #333; font-size: 10px; color: #888; }
+        .chart-container { display: flex; height: 350px; position: relative; border-bottom: 1px solid #333; margin-right: 80px; }
+        .chart-main { flex: 1; position: relative; overflow: hidden; background: #121212; }
+        .price-sidebar { width: 80px; position: absolute; right: -80px; top: 0; bottom: 0; border-left: 1px dashed #333; font-size: 10px; }
 
-        /* 가로 기준선 (그리드) */
-        .price-grid { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px dashed rgba(255,255,255,0.05); pointer-events: none; }
-        
-        /* 가로 가격 라벨 (우측 표현) */
-        .price-label-right { position: absolute; right: 5px; transform: translateY(-50%); white-space: nowrap; padding: 2px 4px; border-radius: 3px; }
-
-        /* 시작/최고/최저 가로선 */
-        .price-line { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; }
+        .price-line { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; opacity: 0.6; }
         .price-line.open { border-top: 1px solid var(--up); }
         .price-line.high { border-top: 1px solid var(--down); }
         .price-line.low { border-top: 1px solid #4444ff; }
+        .price-line.limit { border-top: 1px dashed var(--limit); opacity: 0.3; }
 
-        /* 차트 SVG */
         .chart-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; }
-        .path-line { fill: none; stroke: rgba(255, 255, 255, 0.6); stroke-width: 1; }
+        .path-line { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; }
 
-        /* 현재가 수평선 및 화살표 */
-        .current-price-line { position: absolute; left: 0; right: -70px; border-top: 1px solid var(--primary); z-index: 10; pointer-events: none; }
-        .current-price-tag { position: absolute; right: 5px; background: var(--primary); color: #000; font-weight: bold; padding: 2px 5px; border-radius: 3px; z-index: 11; font-size: 11px; transform: translateY(-50%); }
+        .price-label-right { position: absolute; right: 5px; transform: translateY(-50%); white-space: nowrap; padding: 1px 3px; border-radius: 2px; }
+        .current-price-line { position: absolute; left: 0; right: -80px; border-top: 1px solid var(--primary); z-index: 10; pointer-events: none; }
+        .current-price-tag { position: absolute; right: 2px; background: var(--primary); color: #000; font-weight: bold; padding: 2px 4px; border-radius: 3px; z-index: 11; font-size: 10px; transform: translateY(-50%); }
 
-        #timer-text { font-size: 12px; color: var(--primary); margin-bottom: 5px; }
+        #timer-text { font-size: 11px; color: var(--primary); margin-bottom: 5px; }
     </style>
 </head>
 <body>
-
     <div id="page-setup" class="page">
-        <h2>Market Analysis Setting</h2>
-        <label>마켓 타입</label>
-        <select id="market-type">
-            <option value="SPOT">SPOT</option>
-            <option value="FUTURES">FUTURES</option>
-        </select>
+        <h2>Market Analysis</h2>
+        <label>마켓</label>
+        <select id="market-type"><option value="SPOT">SPOT</option><option value="FUTURES">FUTURES</option></select>
         <label>종목</label>
         <select id="symbol-select"><option>로딩 중...</option></select>
-        <button id="start-btn">차트 분석 시작</button>
+        <button id="start-btn">분석 시작</button>
     </div>
 
     <div id="page-analysis" class="page">
-        <button id="back-btn" style="width:auto; padding:8px 15px; margin-bottom:15px; background:#333; color:#fff; border:none; border-radius:5px;">← 뒤로가기</button>
-        <div id="timer-text">다음 갱신: 05:00</div>
-        <h2 id="current-symbol-title" style="margin:5px 0;">-</h2>
+        <button id="back-btn" style="width:auto; padding:5px 15px; margin-bottom:10px; background:#333; color:#fff; border:none; border-radius:5px;">← 뒤로</button>
+        <div id="timer-text">갱신 대기...</div>
+        <h2 id="current-symbol-title" style="margin:0;">-</h2>
         <div id="session-list" class="session-list"></div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
