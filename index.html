@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertical Market Chart Pro</title>
+    <title>Global Market Flow Terminal</title>
     <style>
-        :root { --primary: #f3ba2f; --bg: #121212; --card: #1e1e1e; --text: #ffffff; --up: #00ff88; --down: #ff4444; --limit: #666; }
+        :root { 
+            --primary: #f3ba2f; --bg: #121212; --card: #1e1e1e; --text: #ffffff; 
+            --up: #00ff88; --down: #ff4444; --limit: #666;
+            --asia-bg: #1a1c2c; --europe-bg: #1c2520; --america-bg: #2a1a1a;
+            --status-closed: rgba(0, 0, 0, 0.6);
+            --status-upcoming: rgba(30, 30, 30, 0.8);
+        }
         body { font-family: 'Pretendard', sans-serif; margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
         
         .page { width: 100vw; height: 100vh; position: absolute; transition: transform 0.4s ease; padding: 20px; box-sizing: border-box; overflow-y: auto; }
@@ -14,50 +20,60 @@
         .active-analysis #page-setup { transform: translateX(-100%); }
         .active-analysis #page-analysis { transform: translateX(0); z-index: 20; }
 
-        select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; }
+        select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; box-sizing: border-box; outline: none; }
         select { background: #333; color: white; border: 1px solid #444; }
         button { background: var(--primary); color: #000; font-weight: bold; cursor: pointer; }
 
-        .session-list { display: flex; flex-direction: column; gap: 30px; margin-top: 20px; }
-        .session-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid #2a2a2a; }
-        .session-card.active { border: 1px solid var(--primary); }
+        /* Independent Sessions Layout */
+        .session-list { display: flex; flex-direction: column; gap: 40px; margin-top: 10px; }
+        .session-card { padding: 25px; border-radius: 24px; border: 1px solid #333; position: relative; overflow: hidden; }
+        .card-asia { background: var(--asia-bg); }
+        .card-europe { background: var(--europe-bg); }
+        .card-america { background: var(--america-bg); }
 
-        .session-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
+        .status-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 1; }
+        .card-live { border: 2.5px solid var(--primary); box-shadow: 0 0 20px rgba(243, 186, 47, 0.15); }
+        .card-closed .status-overlay { background: var(--status-closed); }
+        .card-upcoming .status-overlay { background: var(--status-upcoming); }
 
-        .chart-container { display: flex; height: 350px; position: relative; border-bottom: 1px solid #333; margin-right: 80px; }
-        .chart-main { flex: 1; position: relative; overflow: hidden; background: #121212; }
-        .price-sidebar { width: 80px; position: absolute; right: -80px; top: 0; bottom: 0; border-left: 1px dashed #333; font-size: 10px; }
+        /* Chart Components - Expanded Size */
+        .chart-container { display: flex; height: 420px; position: relative; border-bottom: 1px solid rgba(255,255,255,0.1); margin-right: 110px; z-index: 2; }
+        .chart-main { flex: 1; position: relative; overflow: hidden; background: transparent; }
+        
+        .price-sidebar { width: 110px; position: absolute; right: -110px; top: 0; bottom: 0; border-left: 1px dashed #444; font-size: 10px; z-index: 3; }
+        .label-left { position: absolute; right: 100%; transform: translateY(-50%); white-space: nowrap; padding-right: 12px; font-weight: 600; text-align: right; }
 
-        .price-line { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; opacity: 0.6; }
-        .price-line.open { border-top: 1px solid var(--up); }
-        .price-line.high { border-top: 1px solid var(--down); }
-        .price-line.low { border-top: 1px solid #4444ff; }
-        .price-line.limit { border-top: 1px dashed var(--limit); opacity: 0.3; }
+        /* Set line thickness to 0.9px as requested */
+        .price-line { position: absolute; left: 0; right: 0; height: 0.9px; z-index: 2; opacity: 0.6; }
+        .price-line.open { border-top: 0.9px solid var(--up); }
+        .price-line.high { border-top: 0.9px solid var(--down); }
+        .price-line.low { border-top: 0.9px solid #4444ff; }
+        .price-line.limit { border-top: 0.8px dashed var(--limit); opacity: 0.4; }
 
         .chart-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; }
-        .path-line { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; }
+        .path-line { fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; }
 
-        .price-label-right { position: absolute; right: 5px; transform: translateY(-50%); white-space: nowrap; padding: 1px 3px; border-radius: 2px; }
-        .current-price-line { position: absolute; left: 0; right: -80px; border-top: 1px solid var(--primary); z-index: 10; pointer-events: none; }
-        .current-price-tag { position: absolute; right: 2px; background: var(--primary); color: #000; font-weight: bold; padding: 2px 4px; border-radius: 3px; z-index: 11; font-size: 10px; transform: translateY(-50%); }
+        .current-price-line { position: absolute; left: 0; right: -110px; border-top: 0.9px solid var(--primary); z-index: 10; pointer-events: none; }
+        .current-price-tag { position: absolute; left: 8px; background: var(--primary); color: #000; font-weight: bold; padding: 3px 8px; border-radius: 4px; z-index: 15; font-size: 11px; transform: translateY(-50%); transition: top 0.8s ease; }
 
-        #timer-text { font-size: 11px; color: var(--primary); margin-bottom: 5px; }
+        #timer-text { font-size: 13px; color: var(--primary); margin-bottom: 12px; font-weight: 800; letter-spacing: 0.5px; }
+        .symbol-title { font-size: 32px; margin: 0 0 15px 0; font-weight: 900; color: #fff; }
     </style>
 </head>
 <body>
     <div id="page-setup" class="page">
-        <h2>Market Analysis</h2>
-        <label>마켓</label>
+        <h2 style="color: var(--primary); font-weight: 900;">Global Market Terminal</h2>
+        <label>Market Mode</label>
         <select id="market-type"><option value="SPOT">SPOT</option><option value="FUTURES">FUTURES</option></select>
-        <label>종목</label>
-        <select id="symbol-select"><option>로딩 중...</option></select>
-        <button id="start-btn">분석 시작</button>
+        <label>Asset Symbol</label>
+        <select id="symbol-select"><option value="">Fetching Symbols...</option></select>
+        <button id="start-btn">LAUNCH TERMINAL</button>
     </div>
 
     <div id="page-analysis" class="page">
-        <button id="back-btn" style="width:auto; padding:5px 15px; margin-bottom:10px; background:#333; color:#fff; border:none; border-radius:5px;">← 뒤로</button>
-        <div id="timer-text">갱신 대기...</div>
-        <h2 id="current-symbol-title" style="margin:0;">-</h2>
+        <button id="back-btn" style="width:auto; padding:10px 22px; margin-bottom:15px; background:#333; color:#fff; border:none; border-radius:10px; cursor:pointer;">← BACK</button>
+        <div id="timer-text">NEXT SYNC: --:--</div>
+        <h2 id="current-symbol-title" class="symbol-title">-</h2>
         <div id="session-list" class="session-list"></div>
     </div>
     <script src="script.js"></script>
