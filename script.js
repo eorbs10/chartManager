@@ -1,50 +1,48 @@
 // script.js
 async function fetchTQQQ() {
-    const priceEl = document.getElementById('price');
-    const timeEl = document.getElementById('last-time');
-    const statusEl = document.getElementById('status');
-
-    // HTML 요소 확인
-    if (!priceEl || !timeEl || !statusEl) return;
+    const priceEl = document.getElementById('price-display');
+    const timeEl = document.getElementById('time-display');
+    const errorEl = document.getElementById('error-display');
+    const statusEl = document.getElementById('update-status');
 
     try {
-        // Vercel 서버리스 함수 호출
         const response = await fetch('/api/tqqq');
         const data = await response.json();
 
-        // 에러 응답 확인
+        // 1. 서버 에러 발생 시 처리 (한도 초과 등)
         if (data.error) {
-            throw new Error(data.error);
+            throw new Error(data.message || data.error);
         }
 
         const timeSeries = data["Time Series (5min)"];
         
+        // 2. 데이터 구조가 없는 경우 (API 호출 실패 등)
         if (!timeSeries) {
-            throw new Error("데이터 구조를 찾을 수 없습니다.");
+            console.log("Raw Data Check:", data); // 원본 확인용
+            throw new Error("데이터 구조를 찾을 수 없습니다. (콘솔 확인)");
         }
 
-        // 최신 데이터 추출
+        // 3. 정상 데이터 파싱
         const latestTime = Object.keys(timeSeries)[0];
         const latestData = timeSeries[latestTime];
         const closePrice = parseFloat(latestData["4. close"]).toFixed(2);
 
         // 화면 업데이트
         priceEl.innerText = `$${closePrice}`;
-        timeEl.innerText = `시간: ${latestTime}`;
-        statusEl.innerText = `업데이트: ${new Date().toLocaleTimeString()}`;
-        statusEl.classList.remove('error-text');
-
-        console.log("TQQQ 실시간 데이터:", latestData);
+        timeEl.innerText = `기준 시간: ${latestTime}`;
+        statusEl.innerText = `마지막 성공: ${new Date().toLocaleTimeString()}`;
+        errorEl.style.display = 'none';
 
     } catch (error) {
-        console.error("오류 발생:", error.message);
-        statusEl.innerText = `오류: ${error.message}`;
-        statusEl.classList.add('error-text');
+        console.error("Fetch Error:", error.message);
+        errorEl.innerText = `⚠️ ${error.message}`;
+        errorEl.style.display = 'block';
+        statusEl.innerText = "데이터 갱신 대기 중...";
     }
 }
 
 // 최초 실행
 fetchTQQQ();
 
-// Alpha Vantage 무료 티어 한도를 고려해 1분(61초)마다 실행
-setInterval(fetchTQQQ, 61000);
+// 무료 한도(분당 5회)를 고려하여 1분(65초)마다 자동 갱신
+setInterval(fetchTQQQ, 65000);
