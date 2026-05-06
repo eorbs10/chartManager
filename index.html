@@ -1,24 +1,25 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TQQQ 실시간 터미널</title>
+    <title>TQQQ Debugger</title>
     <style>
-        body { background-color: #0b0e11; color: #eaecef; font-family: monospace; padding: 20px; }
-        .card { max-width: 400px; margin: 50px auto; background: #181a20; padding: 30px; border-radius: 12px; border: 1px solid #2b2f36; }
-        .price { font-size: 3rem; font-weight: bold; color: #02c076; margin: 10px 0; }
-        .status { font-size: 0.8rem; color: #848e9c; margin-top: 20px; }
-        #error-display { color: #cf304a; font-size: 0.85rem; margin-top: 10px; display: none; }
+        body { background: #0b0e11; color: #eee; font-family: monospace; padding: 20px; }
+        .card { border: 1px solid #333; padding: 20px; border-radius: 8px; background: #181a20; }
+        .debug-box { background: #000; color: #00ff00; padding: 15px; margin-top: 20px; font-size: 12px; overflow: auto; max-height: 400px; }
+        .label { color: #848e9c; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div style="color: #848e9c;">TQQQ/USD (5min)</div>
-        <div id="price-display" class="price">$0.00</div>
-        <div id="time-display">데이터 로드 중...</div>
-        <div id="error-display"></div>
-        <div class="status" id="update-status">연결 확인 중...</div>
+        <h3>TQQQ 실시간 시세 (Debug Mode)</h3>
+        <div><span class="label">Price:</span> <span id="price" style="font-size: 24px;">-</span></div>
+        <div id="status" style="margin-top: 10px; color: #848e9c;">데이터 대기 중...</div>
+        
+        <h4>[Server Raw Response]</h4>
+        <pre id="debug-log" class="debug-box">서버로부터 응답을 기다리는 중...</pre>
     </div>
     <script src="script.js"></script>
 </body>

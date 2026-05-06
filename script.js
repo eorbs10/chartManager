@@ -1,48 +1,43 @@
 // script.js
 async function fetchTQQQ() {
-    const priceEl = document.getElementById('price-display');
-    const timeEl = document.getElementById('time-display');
-    const errorEl = document.getElementById('error-display');
-    const statusEl = document.getElementById('update-status');
+    const priceEl = document.getElementById('price');
+    const statusEl = document.getElementById('status');
+    const debugEl = document.getElementById('debug-log');
 
     try {
         const response = await fetch('/api/tqqq');
         const data = await response.json();
 
-        // 1. 서버 에러 발생 시 처리 (한도 초과 등)
-        if (data.error) {
-            throw new Error(data.message || data.error);
+        // 1. 서버 응답을 무조건 화면에 출력 (이게 핵심 디버깅입니다)
+        debugEl.innerText = JSON.stringify(data, null, 2);
+
+        // 2. Alpha Vantage 특유의 한도 제한 메시지 체크
+        if (data["Note"]) {
+            statusEl.innerText = "⚠️ API 호출 한도 초과 (1분 뒤 자동 재시도)";
+            return;
         }
 
+        // 3. 실제 시계열 데이터가 있는지 확인
         const timeSeries = data["Time Series (5min)"];
-        
-        // 2. 데이터 구조가 없는 경우 (API 호출 실패 등)
         if (!timeSeries) {
-            console.log("Raw Data Check:", data); // 원본 확인용
-            throw new Error("데이터 구조를 찾을 수 없습니다. (콘솔 확인)");
+            statusEl.innerText = "❌ 데이터 구조 없음 (Raw JSON 확인 필요)";
+            return;
         }
 
-        // 3. 정상 데이터 파싱
+        // 4. 데이터 표시
         const latestTime = Object.keys(timeSeries)[0];
         const latestData = timeSeries[latestTime];
-        const closePrice = parseFloat(latestData["4. close"]).toFixed(2);
+        const price = parseFloat(latestData["4. close"]).toFixed(2);
 
-        // 화면 업데이트
-        priceEl.innerText = `$${closePrice}`;
-        timeEl.innerText = `기준 시간: ${latestTime}`;
-        statusEl.innerText = `마지막 성공: ${new Date().toLocaleTimeString()}`;
-        errorEl.style.display = 'none';
+        priceEl.innerText = `$${price}`;
+        statusEl.innerText = `성공: ${latestTime}`;
+        statusEl.style.color = "#02c076";
 
     } catch (error) {
-        console.error("Fetch Error:", error.message);
-        errorEl.innerText = `⚠️ ${error.message}`;
-        errorEl.style.display = 'block';
-        statusEl.innerText = "데이터 갱신 대기 중...";
+        debugEl.innerText = `에러 발생: ${error.message}`;
+        statusEl.innerText = "연결 실패";
     }
 }
 
-// 최초 실행
 fetchTQQQ();
-
-// 무료 한도(분당 5회)를 고려하여 1분(65초)마다 자동 갱신
-setInterval(fetchTQQQ, 65000);
+setInterval(fetchTQQQ, 65000); // 무료 한도 보호를 위해 65초 주기
