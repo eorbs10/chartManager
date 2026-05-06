@@ -1,59 +1,35 @@
-/**
- * TQQQ 데이터를 불러와서 화면에 표시하는 함수
- */
-async function getTQQQData() {
-    const statusEl = document.getElementById('status');
-    const timeEl = document.getElementById('last-time');
-    const closeEl = document.getElementById('last-close');
-    const highEl = document.getElementById('last-high');
-    const jsonEl = document.getElementById('raw-json');
+// script.js
+async function fetchTQQQ() {
+    const priceEl = document.getElementById('price');
+    const timeEl = document.getElementById('time');
 
     try {
-        // Vercel 서버리스 함수 호출
+        // 배포 후에는 Vercel 서버의 /api/tqqq 경로를 호출합니다.
         const response = await fetch('/api/tqqq');
+        
+        // 응답이 JSON이 아닐 경우(404 등)를 대비한 체크
+        if (!response.ok) throw new Error(`HTTP 에러! 상태: ${response.status}`);
+        
         const data = await response.json();
-
-        // Alpha Vantage 응답 구조에서 5분봉 시계열 데이터 추출
         const timeSeries = data["Time Series (5min)"];
+        
+        if (!timeSeries) throw new Error("API 한도 초과 또는 키 설정 오류");
 
-        if (!timeSeries) {
-            // API 키 제한이나 오류 메시지 처리
-            const errorMsg = data["Note"] || data["Error Message"] || "데이터를 찾을 수 없습니다.";
-            throw new Error(errorMsg);
-        }
-
-        // 가장 최근 시간(첫 번째 키) 가져오기
-        const timestamps = Object.keys(timeSeries);
-        const latestTime = timestamps[0];
+        const latestTime = Object.keys(timeSeries)[0];
         const latestData = timeSeries[latestTime];
 
-        // 1. 화면 텍스트 업데이트
-        timeEl.innerText = latestTime;
-        closeEl.innerText = `$${parseFloat(latestData["4. close"]).toFixed(2)}`;
-        highEl.innerText = `$${parseFloat(latestData["2. high"]).toFixed(2)}`;
-
-        // 2. Raw JSON 영역에 마지막 캔들 정보 표시
-        jsonEl.innerText = JSON.stringify({
-            time: latestTime,
-            ...latestData
-        }, null, 2);
-
-        // 3. 콘솔에 전체 데이터 출력 (디버깅용)
-        console.log("TQQQ 전체 시계열 데이터:", timeSeries);
-
-        statusEl.innerText = `✅ 업데이트 성공: ${new Date().toLocaleTimeString()}`;
-        statusEl.style.color = "#00ff88";
+        priceEl.innerText = `$${parseFloat(latestData["4. close"]).toFixed(2)}`;
+        timeEl.innerText = `마지막 업데이트: ${latestTime}`;
+        
+        console.log("실시간 데이터 수신 성공:", latestData);
 
     } catch (error) {
         console.error("데이터 로드 실패:", error);
-        statusEl.innerText = `❌ 오류: ${error.message}`;
-        statusEl.style.color = "#ff4444";
-        jsonEl.innerText = "데이터를 불러오는 데 실패했습니다.";
+        timeEl.innerText = "연결 실패 (Vercel 배포 확인 필요)";
+        timeEl.style.color = "#ff4444";
     }
 }
 
-// 최초 실행
-getTQQQData();
-
-// Alpha Vantage 무료 티어 제한(분당 5회)을 고려하여 1분(60초)마다 갱신
-setInterval(getTQQQData, 60000);
+// 최초 실행 및 1분마다 갱신
+fetchTQQQ();
+setInterval(fetchTQQQ, 60000);
