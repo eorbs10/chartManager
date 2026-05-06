@@ -1,43 +1,30 @@
 // script.js
-async function fetchTQQQ() {
+async function fetchTQQQ4H() {
     const priceEl = document.getElementById('price');
-    const statusEl = document.getElementById('status');
     const debugEl = document.getElementById('debug-log');
 
     try {
         const response = await fetch('/api/tqqq');
         const data = await response.json();
-
-        // 1. 서버 응답을 무조건 화면에 출력 (이게 핵심 디버깅입니다)
         debugEl.innerText = JSON.stringify(data, null, 2);
 
-        // 2. Alpha Vantage 특유의 한도 제한 메시지 체크
-        if (data["Note"]) {
-            statusEl.innerText = "⚠️ API 호출 한도 초과 (1분 뒤 자동 재시도)";
-            return;
-        }
+        const hourlyData = data["Time Series (60min)"];
+        if (!hourlyData) return;
 
-        // 3. 실제 시계열 데이터가 있는지 확인
-        const timeSeries = data["Time Series (5min)"];
-        if (!timeSeries) {
-            statusEl.innerText = "❌ 데이터 구조 없음 (Raw JSON 확인 필요)";
-            return;
-        }
+        const timestamps = Object.keys(hourlyData);
+        // 최신 1시간봉 데이터
+        const latestHour = hourlyData[timestamps[0]];
+        const currentPrice = parseFloat(latestHour["4. close"]).toFixed(2);
 
-        // 4. 데이터 표시
-        const latestTime = Object.keys(timeSeries)[0];
-        const latestData = timeSeries[latestTime];
-        const price = parseFloat(latestData["4. close"]).toFixed(2);
+        // [4시간봉 합성 로직 예시]
+        // 4개의 캔들을 순회하며 High/Low/Volume을 합산하여 4시간 단위 데이터를 생성할 수 있습니다.
+        
+        priceEl.innerText = `$${currentPrice}`;
+        document.getElementById('status').innerText = `TQQQ 60분봉 기준 (4H 합성 대기 중)`;
 
-        priceEl.innerText = `$${price}`;
-        statusEl.innerText = `성공: ${latestTime}`;
-        statusEl.style.color = "#02c076";
-
-    } catch (error) {
-        debugEl.innerText = `에러 발생: ${error.message}`;
-        statusEl.innerText = "연결 실패";
+    } catch (e) {
+        console.error(e);
     }
 }
 
-fetchTQQQ();
-setInterval(fetchTQQQ, 65000); // 무료 한도 보호를 위해 65초 주기
+fetchTQQQ4H();
