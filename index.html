@@ -3,21 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TQQQ Monitor</title>
+    <title>TQQQ 실시간 데이터</title>
     <style>
-        body { background: #0b0e11; color: #fff; font-family: monospace; padding: 20px; }
-        .card { border: 1px solid #333; padding: 20px; border-radius: 10px; width: 300px; }
-        #price { font-size: 2.5rem; color: #02c076; margin-bottom: 10px; }
-        #time { font-size: 0.8rem; color: #888; }
+        body { background-color: #0b0e11; color: #eaecef; font-family: monospace; padding: 20px; margin: 0; }
+        .card { max-width: 400px; margin: 20px auto; background: #181a20; padding: 25px; border-radius: 12px; border: 1px solid #2b2f36; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .title { color: #848e9c; font-size: 0.9rem; margin-bottom: 10px; }
+        .price { font-size: 3rem; font-weight: bold; color: #02c076; margin-bottom: 15px; }
+        .status { font-size: 0.8rem; color: #484f58; border-top: 1px solid #2b2f36; pt: 15px; margin-top: 15px; }
+        .error-text { color: #cf304a !important; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h3>TQQQ (5min)</h3>
-        <!-- 자바스크립트가 찾는 ID들 -->
+        <div class="title">TQQQ/USD (5min)</div>
         <div id="price">$0.00</div>
-        <div id="time">데이터를 불러오는 중...</div>
+        
+        <div id="info">
+            <div id="last-time" style="font-size: 0.9rem;">연결 중...</div>
+            <div id="status" class="status">시스템 시작 중</div>
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
