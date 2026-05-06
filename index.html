@@ -3,35 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TQQQ Real-time Terminal</title>
-    <!-- 트레이딩뷰 차트 라이브러리 -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <title>TQQQ Data Fetcher</title>
     <style>
-        body { margin: 0; background-color: #0b0e11; color: #eaecef; font-family: sans-serif; }
-        .container { display: flex; flex-direction: column; height: 100vh; }
-        #chart { flex-grow: 1; width: 100%; }
-        .info-bar { padding: 15px; background: #181a20; border-top: 1px solid #2b2f36; display: flex; gap: 20px; }
-        .price-up { color: #02c076; font-weight: bold; font-size: 1.2rem; }
-        .status { font-size: 12px; color: #848e9c; }
+        body { background-color: #121212; color: #e0e0e0; font-family: monospace; padding: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; border: 1px solid #333; padding: 20px; border-radius: 8px; }
+        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; }
+        .label { color: #888; }
+        .value { color: #00ff88; font-weight: bold; }
+        #raw-json { background: #000; padding: 15px; overflow-x: auto; font-size: 12px; margin-top: 20px; height: 300px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- 차트가 렌더링될 영역 -->
-        <div id="chart"></div>
-
-        <!-- 하단 정보 바 -->
-        <div class="info-bar">
-            <div>
-                <span style="color: #848e9c;">TQQQ/USD:</span>
-                <span id="current-price" class="price-up">Loading...</span>
-            </div>
-            <div id="status" class="status">Vercel API 연결 확인 중...</div>
+        <h2>📡 TQQQ 실시간 데이터 (5분봉)</h2>
+        <div id="status" style="margin-bottom: 15px; font-size: 13px;">연결 중...</div>
+        
+        <div class="data-row">
+            <span class="label">최신 캔들 시간:</span>
+            <span id="last-time" class="value">-</span>
         </div>
+        <div class="data-row">
+            <span class="label">현재가 (Close):</span>
+            <span id="last-close" class="value">$0.00</span>
+        </div>
+        <div class="data-row">
+            <span class="label">고가 (High):</span>
+            <span id="last-high" class="value">$0.00</span>
+        </div>
+
+        <h4>Raw JSON (마지막 캔들)</h4>
+        <pre id="raw-json">데이터를 불러오는 중입니다...</pre>
     </div>
 
-    <!-- 로직 분리 -->
     <script src="script.js"></script>
 </body>
 </html>

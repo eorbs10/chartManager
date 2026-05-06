@@ -1,85 +1,59 @@
-// 차트 설정 및 초기화
-const chartElement = document.getElementById('chart');
-const chart = LightweightCharts.createChart(chartElement, {
-    layout: {
-        background: { type: 'solid', color: '#0b0e11' },
-        textColor: '#d1d4dc',
-    },
-    grid: {
-        vertLines: { color: '#1f2226' },
-        horzLines: { color: '#1f2226' },
-    },
-    timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-    },
-});
-
-// 캔들스틱 시리즈 추가
-const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
-    upColor: '#02c076',
-    downColor: '#cf304a',
-    borderVisible: false,
-    wickUpColor: '#02c076',
-    wickDownColor: '#cf304a',
-});
-
 /**
- * Vercel Serverless Function(/api/tqqq)을 통해 데이터를 가져옵니다.
+ * TQQQ 데이터를 불러와서 화면에 표시하는 함수
  */
-async function fetchTQQQData() {
+async function getTQQQData() {
     const statusEl = document.getElementById('status');
-    const priceEl = document.getElementById('current-price');
+    const timeEl = document.getElementById('last-time');
+    const closeEl = document.getElementById('last-close');
+    const highEl = document.getElementById('last-high');
+    const jsonEl = document.getElementById('raw-json');
 
     try {
-        // Vercel 배포 시 /api/tqqq.js 경로가 이 주소가 됩니다.
+        // Vercel 서버리스 함수 호출
         const response = await fetch('/api/tqqq');
         const data = await response.json();
 
-        // Alpha Vantage 데이터 파싱
+        // Alpha Vantage 응답 구조에서 5분봉 시계열 데이터 추출
         const timeSeries = data["Time Series (5min)"];
-        
+
         if (!timeSeries) {
-            throw new Error(data["Note"] || data["Error Message"] || "데이터 형식이 올바르지 않습니다.");
+            // API 키 제한이나 오류 메시지 처리
+            const errorMsg = data["Note"] || data["Error Message"] || "데이터를 찾을 수 없습니다.";
+            throw new Error(errorMsg);
         }
 
-        const chartData = [];
-        for (let time in timeSeries) {
-            chartData.push({
-                time: new Date(time).getTime() / 1000,
-                open: parseFloat(timeSeries[time]["1. open"]),
-                high: parseFloat(timeSeries[time]["2. high"]),
-                low: parseFloat(timeSeries[time]["3. low"]),
-                close: parseFloat(timeSeries[time]["4. close"]),
-            });
-        }
+        // 가장 최근 시간(첫 번째 키) 가져오기
+        const timestamps = Object.keys(timeSeries);
+        const latestTime = timestamps[0];
+        const latestData = timeSeries[latestTime];
 
-        // 차트는 시간 오름차순이어야 함
-        chartData.sort((a, b) => a.time - b.time);
+        // 1. 화면 텍스트 업데이트
+        timeEl.innerText = latestTime;
+        closeEl.innerText = `$${parseFloat(latestData["4. close"]).toFixed(2)}`;
+        highEl.innerText = `$${parseFloat(latestData["2. high"]).toFixed(2)}`;
 
-        // 데이터 세팅
-        candleSeries.setData(chartData);
-        
-        // 최신 가격 표시
-        const latestPrice = chartData[chartData.length - 1].close;
-        priceEl.innerText = `$${latestPrice.toFixed(2)}`;
-        statusEl.innerText = `마지막 업데이트: ${new Date().toLocaleTimeString()}`;
-        
-        // 차트 범위를 데이터에 맞춤
-        chart.timeScale().fitContent();
+        // 2. Raw JSON 영역에 마지막 캔들 정보 표시
+        jsonEl.innerText = JSON.stringify({
+            time: latestTime,
+            ...latestData
+        }, null, 2);
+
+        // 3. 콘솔에 전체 데이터 출력 (디버깅용)
+        console.log("TQQQ 전체 시계열 데이터:", timeSeries);
+
+        statusEl.innerText = `✅ 업데이트 성공: ${new Date().toLocaleTimeString()}`;
+        statusEl.style.color = "#00ff88";
 
     } catch (error) {
         console.error("데이터 로드 실패:", error);
-        statusEl.innerText = "API 호출 제한 또는 서버 오류";
-        statusEl.style.color = "#cf304a";
+        statusEl.innerText = `❌ 오류: ${error.message}`;
+        statusEl.style.color = "#ff4444";
+        jsonEl.innerText = "데이터를 불러오는 데 실패했습니다.";
     }
 }
 
-// 윈도우 크기 조절 시 차트 리사이징
-window.addEventListener('resize', () => {
-    chart.applyOptions({ width: chartElement.clientWidth, height: chartElement.clientHeight });
-});
+// 최초 실행
+getTQQQData();
 
-// 최초 실행 및 1분마다 갱신 (Alpha Vantage 무료 키 제한 고려)
-fetchTQQQData();
-setInterval(fetchTQQQData, 60000);
+// Alpha Vantage 무료 티어 제한(분당 5회)을 고려하여 1분(60초)마다 갱신
+setInterval(getTQQQData, 60000);
