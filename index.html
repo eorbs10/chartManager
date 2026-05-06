@@ -1,25 +1,40 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TQQQ Debugger</title>
+    <title>Binance Market Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background: #0b0e11; color: #eee; font-family: monospace; padding: 20px; }
-        .card { border: 1px solid #333; padding: 20px; border-radius: 8px; background: #181a20; }
-        .debug-box { background: #000; color: #00ff00; padding: 15px; margin-top: 20px; font-size: 12px; overflow: auto; max-height: 400px; }
-        .label { color: #848e9c; }
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: auto; }
+        .selection-area { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; }
+        #listContainer { cursor: pointer; color: blue; }
+        .hidden { display: none; }
+        canvas { max-width: 100%; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h3>TQQQ 실시간 시세 (Debug Mode)</h3>
-        <div><span class="label">Price:</span> <span id="price" style="font-size: 24px;">-</span></div>
-        <div id="status" style="margin-top: 10px; color: #848e9c;">데이터 대기 중...</div>
+    <div class="container">
+        <h1>Binance Market Explorer</h1>
         
-        <h4>[Server Raw Response]</h4>
-        <pre id="debug-log" class="debug-box">서버로부터 응답을 기다리는 중...</pre>
+        <!-- 첫 번째 페이지 역할: 설정 및 목록 -->
+        <div id="setupPage" class="selection-area">
+            <label for="marketType">시장 선택:</label>
+            <select id="marketType">
+                <option value="SPOT">현물 (Spot)</option>
+                <option value="UM">선물 (USDT-M Futures)</option>
+            </select>
+            <button onclick="fetchTopVolume()">상위 10개 조회</button>
+            <ul id="listContainer"></ul>
+        </div>
+
+        <!-- 두 번째 페이지 역할: 차트 및 분석 -->
+        <div id="chartPage" class="hidden">
+            <button onclick="backToMain()">← 뒤로 가기</button>
+            <h2 id="selectedSymbol">--</h2>
+            <p id="statsText"></p>
+            <canvas id="priceChart"></canvas>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
